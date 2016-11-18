@@ -72,34 +72,93 @@
                 maxRight = This.css('right').replace('px', ''),
                 nRight = maxRight,
                 oRight = maxRight,
-                done = false;
+                done = false,
+                supportedTouch = true,
+                isDown = false;
+            try { ontouchstart; } catch (e) { supportedTouch = false; }
             var el = This.get(0);
-            el.addEventListener('touchstart', function (event) {
-                startPos = { x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY };
-            }, false);
-            el.addEventListener('touchmove', function (event) {
-                event.preventDefault();
-                currentPos = { x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY };
-                nRight = oRight - (currentPos.x - startPos.x);
-                if (nRight > maxRight) {
-                    //do nothing
-                } else if (nRight >= 0 && nRight <= maxRight) {
-                    This.css('right', nRight + 'px');
-                } else {
-                    done = true;
+            if (supportedTouch) {
+                el.addEventListener('touchstart', function (event) {
+                    startPos = { x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY };
+                }, false);
+                el.addEventListener('touchmove', function (event) {
+                    event.preventDefault();
+                    currentPos = { x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY };
+                    nRight = oRight - (currentPos.x - startPos.x);
+                    if (nRight > maxRight) {
+                        //do nothing
+                    } else if (nRight >= 0 && nRight <= maxRight) {
+                        This.css('right', nRight + 'px');
+                    } else {
+                        done = true;
+                    }
+                }, false);
+                el.addEventListener('touchend', function (event) {
+                    if (done && typeof (onSuccess) == 'function' && nRight <= 0) {
+                        onSuccess();
+                    } else if (!done && typeof (onFailed) == 'function') {
+                        onFailed();
+                    }
+                    done = false;
+                    oRight = nRight;
+                    startPos = { x: 0, y: 0 },
+                    currentPos = { x: 0, y: 0 };
+                }, false);
+            } else {
+                function mouseDown(e) {
+                    isDown = true;
+                    startPos = { x: e.pageX, y: e.pageY };
+                    el.addEventListener("mousemove", mouseMove);
+                    el.addEventListener("mouseup", mouseUp);
+                    el.addEventListener("mouseleave", mouseLeave);
                 }
-            }, false);
-            el.addEventListener('touchend', function (event) {
-                if (done && typeof (onSuccess) == 'function' && nRight <= 0) {
-                    onSuccess();
-                } else if (!done && typeof (onFailed) == 'function') {
-                    onFailed();
+                function mouseMove(e) {
+                    e.preventDefault();
+                    currentPos = { x: e.pageX, y: e.pageY };
+                    nRight = oRight - (currentPos.x - startPos.x);
+                    if (nRight > maxRight) {
+                        //do nothing
+                    } else if (nRight >= 0 && nRight <= maxRight) {
+                        This.css('right', nRight + 'px');
+                    } else {
+                        done = true;
+                    }
                 }
-                done = false;
-                oRight = nRight;
-                startPos = { x: 0, y: 0 },
-                currentPos = { x: 0, y: 0 };
-            }, false);
+                function mouseUp(e) {
+                    if (done && typeof (onSuccess) == 'function' && nRight <= 0) {
+                        onSuccess();
+                    } else if (!done && typeof (onFailed) == 'function') {
+                        onFailed();
+                    }
+                    done = false;
+                    oRight = nRight;
+                    startPos = { x: 0, y: 0 },
+                    currentPos = { x: 0, y: 0 };
+                    isDown = false;
+                    el.removeEventListener("mousemove", mouseMove);
+                    el.removeEventListener("mouseup", mouseUp);
+                    el.removeEventListener("mouseleave", mouseLeave);
+                }
+                function mouseLeave(e) {
+                    if (isDown) {
+                        if (done && typeof (onSuccess) == 'function' && nRight <= 0) {
+                            onSuccess();
+                        } else if (!done && typeof (onFailed) == 'function') {
+                            onFailed();
+                        }
+                        done = false;
+                        oRight = nRight;
+                        startPos = { x: 0, y: 0 },
+                        currentPos = { x: 0, y: 0 };
+                        isDown = false;
+                        el.removeEventListener("mousemove", mouseMove);
+                        el.removeEventListener("mouseup", mouseUp);
+                        el.removeEventListener("mouseleave", mouseLeave);
+                    }
+                }
+                //bind all the mouse events
+                el.addEventListener("mousedown", mouseDown);
+            }
             var c = 0;
             setInterval(function () {
                 if (c > 2) {
